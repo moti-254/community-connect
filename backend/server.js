@@ -1,4 +1,4 @@
-const express = require('express');
+; const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const mongoose = require('mongoose');
@@ -17,7 +17,7 @@ require('./models/Report');
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:3000', // Your React app URL
+  origin: true, // Your React app URL
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' })); // For large image uploads later
@@ -77,4 +77,4 @@ app.listen(PORT, () => {
 🌍 Environment: ${process.env.NODE_ENV || 'development'}
 📅 Started at: ${new Date().toISOString()}
   `);
-});
+}); 

@@ -1,24 +1,112 @@
 const nodemailer = require('nodemailer');
 
-// Gmail Configuration
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // Use App Password here
-  },
-});
-
-// Verify connection configuration
-transporter.verify((error, success) => {
-  if (error) {
-    console.log('❌ Gmail configuration error:', error);
-  } else {
-    console.log('✅ Gmail server is ready to send messages');
+// Email Service with graceful error handling
+class EmailService {
+  constructor() {
+    this.transporter = null;
+    this.isConfigured = false;
+    this.initialized = false;
+    this.init();
   }
-});
 
-// Email templates (same as before)
+  init() {
+    if (this.initialized) return;
+    this.initialized = true;
+
+    // Check if email credentials are provided
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.log('📧 Email credentials not found - email features will be simulated');
+      return;
+    }
+
+    console.log('📧 Initializing email service...');
+    
+    try {
+      this.transporter = nodemailer.createTransporter({
+        service: 'gmail',
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
+        },
+        // Add timeout protection
+        connectionTimeout: 10000, // 10 seconds
+        greetingTimeout: 10000,
+        socketTimeout: 10000,
+        secure: true,
+        tls: {
+          rejectUnauthorized: false
+        }
+      });
+
+      // Verify connection asynchronously without blocking startup
+      this.verifyConnectionAsync();
+      
+    } catch (error) {
+      console.log('❌ Email service initialization failed:', error.message);
+      console.log('⚠️ Email features disabled - application will continue running');
+      this.transporter = null;
+    }
+  }
+
+  async verifyConnectionAsync() {
+    if (!this.transporter) return;
+
+    try {
+      // Add timeout to verification
+      const verificationPromise = this.transporter.verify();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Email verification timeout')), 10000)
+      );
+
+      await Promise.race([verificationPromise, timeoutPromise]);
+      this.isConfigured = true;
+      console.log('✅ Gmail server is ready to send messages');
+    } catch (error) {
+      console.log('❌ Gmail configuration error:', error.message);
+      console.log('⚠️ Email features disabled - will simulate email sending');
+      this.transporter = null;
+      this.isConfigured = false;
+    }
+  }
+
+  // Helper method to check if email can be sent
+  canSendEmail() {
+    return this.transporter && this.isConfigured;
+  }
+
+  // Generic email send method with simulation fallback
+  async sendEmail(mailOptions) {
+    // If email not configured, simulate sending
+    if (!this.canSendEmail()) {
+      console.log('📧 [SIMULATED] Would send email:');
+      console.log('   To:', mailOptions.to);
+      console.log('   Subject:', mailOptions.subject);
+      return { 
+        success: true, 
+        simulated: true,
+        message: 'Email simulated (service not configured)'
+      };
+    }
+
+    try {
+      const result = await this.transporter.sendMail(mailOptions);
+      console.log('✅ Email sent successfully:', result.messageId);
+      return { success: true, result };
+    } catch (error) {
+      console.log('❌ Failed to send email:', error.message);
+      return { 
+        success: false, 
+        error: error.message,
+        simulated: false
+      };
+    }
+  }
+}
+
+// Create singleton instance
+const emailService = new EmailService();
+
+// Your existing email templates (unchanged)
 const emailTemplates = {
   newReport: (report, adminEmails) => ({
     from: `"Community Connect" <${process.env.EMAIL_USER}>`,
@@ -184,7 +272,7 @@ const emailTemplates = {
   })
 };
 
-// Email sending functions
+// Updated email sending functions with graceful error handling
 const sendNewReportNotification = async (report) => {
   try {
     const User = require('../models/User');
@@ -192,49 +280,72 @@ const sendNewReportNotification = async (report) => {
     
     if (adminUsers.length === 0) {
       console.log('⚠️ No active admin users found for notification');
-      return;
+      return { success: false, message: 'No admin users found' };
     }
 
     const adminEmails = adminUsers.map(admin => admin.email);
     const mailOptions = emailTemplates.newReport(report, adminEmails);
 
-    const result = await transporter.sendMail(mailOptions);
-    console.log('📧 New report notification sent to admins:', result.messageId);
+    const result = await emailService.sendEmail(mailOptions);
+    
+    if (result.simulated) {
+      console.log('📧 [SIMULATED] New report notification would be sent to admins');
+    } else if (result.success) {
+      console.log('📧 New report notification sent to admins');
+    }
+    
     return result;
   } catch (error) {
     console.error('❌ Failed to send new report notification:', error);
+    return { success: false, error: error.message };
   }
 };
 
 const sendStatusUpdateNotification = async (report, oldStatus, newStatus) => {
   try {
     // Don't send notification if status didn't actually change
-    if (oldStatus === newStatus) return;
+    if (oldStatus === newStatus) {
+      return { success: true, message: 'Status unchanged, no notification sent' };
+    }
 
     const mailOptions = emailTemplates.statusUpdate(report, oldStatus, newStatus);
-    const result = await transporter.sendMail(mailOptions);
+    const result = await emailService.sendEmail(mailOptions);
     
-    console.log(`📧 Status update notification sent: ${oldStatus} → ${newStatus}`);
+    if (result.simulated) {
+      console.log(`📧 [SIMULATED] Status update would be sent: ${oldStatus} → ${newStatus}`);
+    } else if (result.success) {
+      console.log(`📧 Status update notification sent: ${oldStatus} → ${newStatus}`);
+    }
+    
     return result;
   } catch (error) {
     console.error('❌ Failed to send status update notification:', error);
+    return { success: false, error: error.message };
   }
 };
 
 const sendReportResolvedNotification = async (report) => {
   try {
     const mailOptions = emailTemplates.reportResolved(report);
-    const result = await transporter.sendMail(mailOptions);
+    const result = await emailService.sendEmail(mailOptions);
     
-    console.log('🎉 Report resolved notification sent to user');
+    if (result.simulated) {
+      console.log('📧 [SIMULATED] Report resolved notification would be sent to user');
+    } else if (result.success) {
+      console.log('🎉 Report resolved notification sent to user');
+    }
+    
     return result;
   } catch (error) {
     console.error('❌ Failed to send report resolved notification:', error);
+    return { success: false, error: error.message };
   }
 };
 
+// Export both the service and individual functions for backward compatibility
 module.exports = {
-  transporter,
+  transporter: emailService.transporter, // For backward compatibility
+  emailService, // New service instance
   sendNewReportNotification,
   sendStatusUpdateNotification,
   sendReportResolvedNotification
