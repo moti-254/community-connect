@@ -1,0 +1,80 @@
+# Backend
+backend/node_modules/
+backend/.env
+backend/uploads/
+backend/*.log
+
+# Frontend (for future)
+frontend/node_modules/
+frontend/.env
+frontend/dist/
+frontend/*.log
+
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Environment variables
+.env
+*.env
+.env.local
+.env.production
+.env.development
+.env.example
+
+# Uploads and temporary files
+
+backend/temp/
+
+frontend/build/
+
+# Logs
+*.log
+logs/
+backend/*.log
+frontend/*.log
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# General
+.DS_Store
+*.log
+.env
