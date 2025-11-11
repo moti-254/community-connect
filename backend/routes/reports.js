@@ -825,88 +825,106 @@ router.delete('/:reportId/images', async (req, res) => {
 // PUT /api/reports/:id - Update report with email notifications
 router.put('/:id', async (req, res) => {
   try {
+    console.log('\n🎯 ========== FRONTEND REPORT UPDATE STARTED ==========');
+    console.log('📋 Request details:');
+    console.log('   User ID:', req.headers['x-user-id']);
+    console.log('   Report ID:', req.params.id);
+    console.log('   Request body:', req.body);
+
     const report = await Report.findById(req.params.id)
       .populate('createdBy', 'username email')
       .populate('assignedTo', 'username email');
-    
+
+    console.log('📊 Report data loaded:');
+    console.log('   Report title:', report.title);
+    console.log('   CreatedBy email:', report.createdBy?.email);
+    console.log('   Current status:', report.status);
+
     if (!report) {
-      return res.status(404).json({
-        success: false,
-        message: 'Report not found'
-      });
+      return res.status(404).json({ success: false, message: 'Report not found' });
     }
-    
+
     // Authorization check
     if (!req.user.canModifyReport(report)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to modify this report'
-      });
+      return res.status(403).json({ success: false, message: 'Not authorized' });
     }
-    
+
     const { status, assignedTo, priority } = req.body;
-    const oldStatus = report.status; // ⭐ Store old status for notification
-    
+    const oldStatus = report.status;
+
+    console.log('🔄 Status change analysis:');
+    console.log('   Old status:', oldStatus);
+    console.log('   New status:', status);
+    console.log('   Status changed?', status && status !== oldStatus);
+
     const updateData = { updatedAt: new Date() };
     
-    // Only admins can update reports
     if (req.user.isAdmin()) {
       if (status) updateData.status = status;
       if (assignedTo) updateData.assignedTo = assignedTo;
       if (priority) updateData.priority = priority;
-    } else {
-      return res.status(403).json({
-        success: false,
-        message: 'Only admins can update reports'
-      });
     }
-    
+
     const updatedReport = await Report.findByIdAndUpdate(
       req.params.id,
       updateData,
-      { 
-        new: true, // Return updated document
-        runValidators: true 
-      }
+      { new: true, runValidators: true }
     )
     .populate('createdBy', 'username email')
     .populate('assignedTo', 'username email');
-    
-    // ⭐ NEW: Send status update notification if status changed
+
+    console.log('✅ Report updated in database');
+
+    // ⭐ CRITICAL: Email debugging section
     if (status && status !== oldStatus) {
-      console.log(`🔄 Status changed: ${oldStatus} → ${status}`);
+      console.log('\n📧 ========== EMAIL PROCESS STARTED ==========');
+      console.log('1. Checking email service configuration:');
+      console.log('   Email service canSendEmail:', emailService.canSendEmail());
+      console.log('   Email service isConfigured:', emailService.isConfigured);
       
-      sendStatusUpdateNotification(updatedReport, oldStatus, status)
-        .then(() => console.log(`✅ Status update email sent: ${oldStatus} → ${status}`))
-        .catch(emailError => console.error('❌ Status email failed:', emailError));
+      console.log('2. Checking recipient details:');
+      console.log('   Recipient email:', updatedReport.createdBy?.email);
+      console.log('   Recipient username:', updatedReport.createdBy?.username);
       
-      // ⭐ NEW: Special notification for resolved reports
-      if (status === 'Resolved') {
-        sendReportResolvedNotification(updatedReport)
-          .then(() => console.log('🎉 Resolution email sent to user'))
-          .catch(emailError => console.error('❌ Resolution email failed:', emailError));
+      if (!updatedReport.createdBy?.email) {
+        console.log('❌ ABORTING: No recipient email found!');
+      } else {
+        console.log('3. Calling sendStatusUpdateNotification...');
+        
+        // Test email service directly first
+        console.log('   Testing email service directly...');
+        const testEmailResult = await emailService.sendEmail({
+          to: updatedReport.createdBy.email,
+          subject: 'TEST: Community Connect Email',
+          html: '<h1>Test Email</h1><p>This is a test from the report update route.</p>'
+        });
+        console.log('   Direct email test result:', testEmailResult);
+        
+        console.log('4. Now calling status update notification...');
+        const emailResult = await sendStatusUpdateNotification(updatedReport, oldStatus, status);
+        console.log('5. Status update email result:', emailResult);
+        
+        if (status === 'Resolved') {
+          console.log('6. Calling resolved notification...');
+          const resolvedResult = await sendReportResolvedNotification(updatedReport);
+          console.log('7. Resolved email result:', resolvedResult);
+        }
       }
+      console.log('📧 ========== EMAIL PROCESS COMPLETED ==========\n');
+    } else {
+      console.log('📧 No email sent - status unchanged or not provided');
     }
-    
-    // ⭐ NEW: Send assignment notification if assigned to someone
-    if (assignedTo && assignedTo !== report.assignedTo?.toString()) {
-      console.log(`👤 Assignment changed for report: ${updatedReport._id}`);
-      // You could add an assignment notification function here
-    }
+
+    console.log('🎯 ========== FRONTEND REQUEST COMPLETED ==========\n');
     
     res.json({
       success: true,
       message: 'Report updated successfully',
-      data: updatedReport,
-      notifications: {
-        statusChanged: status && status !== oldStatus,
-        assignedChanged: assignedTo && assignedTo !== report.assignedTo?.toString(),
-        priorityChanged: priority && priority !== report.priority
-      }
+      data: updatedReport
     });
-    
+
   } catch (error) {
-    console.error('❌ Error updating report:', error);
+    console.error('❌ Report update error:', error);
     res.status(400).json({
       success: false,
       message: 'Failed to update report',
