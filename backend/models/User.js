@@ -22,6 +22,14 @@ const userSchema = new mongoose.Schema({
     minlength: [2, 'Username must be at least 2 characters'],
     maxlength: [30, 'Username cannot exceed 30 characters']
   },
+  name: { // ⭐⭐⭐ ADD THIS FIELD FOR CLERK SYNC ⭐⭐⭐
+    type: String,
+    required: [true, 'Name is required'],
+    trim: true,
+    minlength: [2, 'Name must be at least 2 characters'],
+    maxlength: [50, 'Name cannot exceed 50 characters'],
+    default: 'Community User' // Default name for existing users
+  },
   role: { 
     type: String, 
     enum: ['resident', 'admin'], 
@@ -31,6 +39,9 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true, // ⭐⭐⭐ MAKE SURE THIS HAS A DEFAULT VALUE ⭐⭐⭐
     required: true
+  },
+  lastSyncedAt: { // ⭐⭐⭐ ADD THIS FOR CLERK SYNC TRACKING ⭐⭐⭐
+    type: Date
   },
   createdAt: { 
     type: Date, 
