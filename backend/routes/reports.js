@@ -10,18 +10,59 @@ const { deleteImageFromCloudinary } = require('../utils/cloudinary-cleanup');
 const { generateOptimizedVersions } = require('../middleware/image-optimizer');
 const router = express.Router();
 
-// Input validation middleware
+// Input validation middleware - UPDATED VERSION
 const validateReportInput = (req, res, next) => {
-  const { title, description, category, location } = req.body;
+  console.log('🔍 Validating report input...');
+  console.log('📦 Raw request body:', req.body);
+  
+  let location;
+  
+  try {
+    // Parse location if it's a JSON string (from FormData)
+    if (typeof req.body.location === 'string') {
+      console.log('🔄 Parsing location from JSON string...');
+      location = JSON.parse(req.body.location);
+      // Replace the string with parsed object for the route handler
+      req.body.location = location;
+    } else {
+      location = req.body.location;
+    }
+    
+    console.log('📍 Parsed location:', location);
+  } catch (error) {
+    console.error('❌ Error parsing location:', error);
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid location format',
+      errors: ['Location must be a valid JSON object']
+    });
+  }
+
+  const { title, description, category } = req.body;
   
   const errors = [];
+  
+  // Basic field validation
   if (!title || title.trim().length === 0) errors.push('Title is required');
   if (!description || description.trim().length === 0) errors.push('Description is required');
   if (!category) errors.push('Category is required');
-  if (!location || !location.address) errors.push('Location address is required');
-  if (!location.coordinates || !location.coordinates.latitude || !location.coordinates.longitude) {
-    errors.push('Valid coordinates are required');
+  
+  // Location validation with parsed data
+  if (!location || !location.address || location.address.trim().length === 0) {
+    errors.push('Location address is required');
   }
+  
+  if (!location || !location.coordinates) {
+    errors.push('Valid coordinates are required');
+  } else if (!location.coordinates.latitude || !location.coordinates.longitude) {
+    errors.push('Both latitude and longitude coordinates are required');
+  } else if (typeof location.coordinates.latitude !== 'number' || typeof location.coordinates.longitude !== 'number') {
+    errors.push('Coordinates must be valid numbers');
+  } else if (location.coordinates.latitude === 0 && location.coordinates.longitude === 0) {
+    errors.push('Valid coordinates are required (cannot be 0,0)');
+  }
+
+  console.log('📋 Validation errors found:', errors);
 
   if (errors.length > 0) {
     return res.status(400).json({
@@ -31,6 +72,7 @@ const validateReportInput = (req, res, next) => {
     });
   }
   
+  console.log('✅ Validation passed');
   next();
 };
 
