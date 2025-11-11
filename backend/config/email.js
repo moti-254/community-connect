@@ -4,8 +4,8 @@ const nodemailer = require('nodemailer');
 class EmailService {
   constructor() {
     this.transporter = null;
-    this.isConfigured = false;
-    this.initialized = false;
+    this.isConfigured = true;//false
+    this.initialized = true;//false
     this.init();
   }
 

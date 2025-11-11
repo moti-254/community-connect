@@ -1,6 +1,7 @@
 const express = require('express');
 const Report = require('../models/Report');
-const { 
+const {
+  emailService, 
   sendNewReportNotification, 
   sendStatusUpdateNotification,
   sendReportResolvedNotification 
