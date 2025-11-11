@@ -3,7 +3,7 @@ const nodemailer = require('nodemailer');
 // Email Service with graceful error handling
 class EmailService {
   constructor() {
-    this.transporter = null;
+    this.transporter = true;
     this.isConfigured = true;//false
     this.initialized = true;//false
     this.init();
