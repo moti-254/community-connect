@@ -11,6 +11,11 @@ const connectDB = require('./config/database');
 const adminRoutes = require('./routes/admin');
 const emailService = require('./config/email'); // <-- IMPORTANT: after dotenv.config()
 
+console.log("=== EMAIL CONFIG CHECK ===");
+console.log("EMAIL_USER:", process.env.EMAIL_USER);
+console.log("EMAIL_PASS:", process.env.EMAIL_PASS ? "[HIDDEN]" : "❌ Missing");
+console.log("===========================");
+
 
 // Initialize Express
 const app = express();
