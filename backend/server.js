@@ -1,9 +1,15 @@
-; const express = require('express');
-const cors = require('cors');
+// ✅ 1. Load environment variables FIRST
 require('dotenv').config();
+
+// ✅ 2. Import core modules
+const express = require('express');
+const cors = require('cors');
 const mongoose = require('mongoose');
+
+// ✅ 3. Import your local modules (AFTER dotenv)
 const connectDB = require('./config/database');
 const adminRoutes = require('./routes/admin');
+const emailService = require('./config/email'); // <-- IMPORTANT: after dotenv.config()
 
 
 // Initialize Express
