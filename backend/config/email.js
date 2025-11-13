@@ -6,10 +6,10 @@ class EmailService {
     this.transporter = null;
     this.isConfigured = false;
     this.initialized = false;
-    this.init();
+    //this.init();
   }
 
-  init() {
+  async init() {
     if (this.initialized) return;
     this.initialized = true;
 
@@ -39,7 +39,7 @@ class EmailService {
       });
 
       // Verify connection asynchronously without blocking startup
-      this.verifyConnectionAsync();
+      await this.verifyConnectionAsync();
       
     } catch (error) {
       console.log('❌ Email service initialization failed:', error.message);
