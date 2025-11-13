@@ -7,6 +7,9 @@ class EmailService {
     this.isConfigured = false;
     this.initialized = false;
     //this.init();
+
+    // Wrap initialization in a promise
+    this.initPromise = this.init();
   }
 
   async init() {
