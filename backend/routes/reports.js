@@ -1,7 +1,7 @@
 const express = require('express');
 const Report = require('../models/Report');
 const {
-  emailService, 
+   
   sendNewReportNotification, 
   sendStatusUpdateNotification,
   sendReportResolvedNotification 
@@ -880,12 +880,9 @@ router.put('/:id', async (req, res) => {
     if (status && status !== oldStatus) {
   console.log('\n📧 ========== EMAIL PROCESS STARTED ==========');
 
-  // 1️⃣ Verify the email service first
-  await emailService.verifyConnectionAsync();
+  
 
-  console.log('1. Checking email service configuration:');
-  console.log('   Email service canSendEmail:', emailService.canSendEmail());
-  console.log('   Email service isConfigured:', emailService.isConfigured);
+  
 
   // 2️⃣ Check recipient details
   const recipientEmail = updatedReport.createdBy?.email;
@@ -898,14 +895,7 @@ router.put('/:id', async (req, res) => {
   if (!recipientEmail) {
     console.log('❌ ABORTING: No recipient email found!');
   } else {
-    // 3️⃣ Test sending an email directly
-    console.log('3. Testing email service directly...');
-    const testEmailResult = await emailService.sendEmail({
-      to: recipientEmail,
-      subject: 'TEST: Community Connect Email',
-      html: '<h1>Test Email</h1><p>This is a test from the report update route.</p>'
-    });
-    console.log('   Direct email test result:', testEmailResult);
+    
 
     // 4️⃣ Send status update notification
     console.log('4. Sending status update notification...');

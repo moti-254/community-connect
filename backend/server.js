@@ -9,7 +9,7 @@ const mongoose = require('mongoose');
 // ✅ 3. Import your local modules (AFTER dotenv)
 const connectDB = require('./config/database');
 const adminRoutes = require('./routes/admin');
-const { emailService } = require('./config/email'); // <-- IMPORTANT: after dotenv.config()
+
 
 console.log("=== EMAIL CONFIG CHECK ===");
 console.log("EMAIL_USER:", process.env.EMAIL_USER);
@@ -79,12 +79,10 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 5000;
 
-(async () => {
-  console.log("=== Waiting for email service to initialize ===");
-  await emailService.initPromise;
-  console.log("=== Email service ready (or simulated) ===");
+
+
+ 
 
   const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => {
@@ -95,4 +93,4 @@ const PORT = process.env.PORT || 5000;
 📅 Started at: ${new Date().toISOString()}
     `);
   });
-})();
+
