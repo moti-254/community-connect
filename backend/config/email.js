@@ -37,7 +37,7 @@ class EmailService {
         socketTimeout: 10000,
         secure: true,
         tls: {
-          rejectUnauthorized: false
+          rejectUnauthorized: true
         }
       });
 

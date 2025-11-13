@@ -878,41 +878,50 @@ router.put('/:id', async (req, res) => {
 
     // ⭐ CRITICAL: Email debugging section
     if (status && status !== oldStatus) {
-      console.log('\n📧 ========== EMAIL PROCESS STARTED ==========');
-      console.log('1. Checking email service configuration:');
-      console.log('   Email service canSendEmail:', emailService.canSendEmail());
-      console.log('   Email service isConfigured:', emailService.isConfigured);
-      
-      console.log('2. Checking recipient details:');
-      console.log('   Recipient email:', updatedReport.createdBy?.email);
-      console.log('   Recipient username:', updatedReport.createdBy?.username);
-      
-      if (!updatedReport.createdBy?.email) {
-        console.log('❌ ABORTING: No recipient email found!');
-      } else {
-        console.log('3. Calling sendStatusUpdateNotification...');
-        
-        // Test email service directly first
-        console.log('   Testing email service directly...');
-        const testEmailResult = await emailService.sendEmail({
-          to: updatedReport.createdBy.email,
-          subject: 'TEST: Community Connect Email',
-          html: '<h1>Test Email</h1><p>This is a test from the report update route.</p>'
-        });
-        console.log('   Direct email test result:', testEmailResult);
-        
-        console.log('4. Now calling status update notification...');
-        const emailResult = await sendStatusUpdateNotification(updatedReport, oldStatus, status);
-        console.log('5. Status update email result:', emailResult);
-        
-        if (status === 'Resolved') {
-          console.log('6. Calling resolved notification...');
-          const resolvedResult = await sendReportResolvedNotification(updatedReport);
-          console.log('7. Resolved email result:', resolvedResult);
-        }
-      }
-      console.log('📧 ========== EMAIL PROCESS COMPLETED ==========\n');
-    } else {
+  console.log('\n📧 ========== EMAIL PROCESS STARTED ==========');
+
+  // 1️⃣ Verify the email service first
+  await emailService.verifyConnectionAsync();
+
+  console.log('1. Checking email service configuration:');
+  console.log('   Email service canSendEmail:', emailService.canSendEmail());
+  console.log('   Email service isConfigured:', emailService.isConfigured);
+
+  // 2️⃣ Check recipient details
+  const recipientEmail = updatedReport.createdBy?.email;
+  const recipientUsername = updatedReport.createdBy?.username;
+
+  console.log('2. Checking recipient details:');
+  console.log('   Recipient email:', recipientEmail);
+  console.log('   Recipient username:', recipientUsername);
+
+  if (!recipientEmail) {
+    console.log('❌ ABORTING: No recipient email found!');
+  } else {
+    // 3️⃣ Test sending an email directly
+    console.log('3. Testing email service directly...');
+    const testEmailResult = await emailService.sendEmail({
+      to: recipientEmail,
+      subject: 'TEST: Community Connect Email',
+      html: '<h1>Test Email</h1><p>This is a test from the report update route.</p>'
+    });
+    console.log('   Direct email test result:', testEmailResult);
+
+    // 4️⃣ Send status update notification
+    console.log('4. Sending status update notification...');
+    const statusEmailResult = await sendStatusUpdateNotification(updatedReport, oldStatus, status);
+    console.log('5. Status update email result:', statusEmailResult);
+
+    // 5️⃣ Send resolved report notification if needed
+    if (status === 'Resolved') {
+      console.log('6. Sending resolved report notification...');
+      const resolvedEmailResult = await sendReportResolvedNotification(updatedReport);
+      console.log('7. Resolved email result:', resolvedEmailResult);
+    }
+  }
+
+  console.log('📧 ========== EMAIL PROCESS COMPLETED ==========');
+} else {
       console.log('📧 No email sent - status unchanged or not provided');
     }
 
