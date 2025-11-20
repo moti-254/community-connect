@@ -76,12 +76,32 @@ reportSchema.pre('save', function(next) {
   next();
 });
 
+// ⭐ NEW: Update tags on findOneAndUpdate
+reportSchema.pre('findOneAndUpdate', function(next) {
+  const update = this.getUpdate();
+
+  if (update.title || update.description) {
+    const text = `${update.title || ''} ${update.description || ''}`.toLowerCase();
+    const words = text.split(/\W+/).filter(w => w.length > 2);
+    update.tags = [...new Set(words)].slice(0, 10);
+  }
+
+  update.updatedAt = Date.now();
+  this.setUpdate(update);
+  next();
+});
+
+
 // ⭐ NEW: Create text index for full-text search
 reportSchema.index({
   title: 'text',
   description: 'text',
   tags: 'text',
-  'location.address': 'text'
+  'location.address': 'text',
+  location: "2dsphere",
+  
+
+
 });
 
 module.exports = mongoose.model('Report', reportSchema);

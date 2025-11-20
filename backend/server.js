@@ -1,46 +1,81 @@
+// =============================================
 // ✅ 1. Load environment variables FIRST
+// =============================================
 require('dotenv').config();
 
+// =============================================
 // ✅ 2. Import core modules
+// =============================================
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
 
-// ✅ 3. Import your local modules (AFTER dotenv)
+// =============================================
+// ✅ 3. Import local modules (AFTER dotenv)
+// =============================================
 const connectDB = require('./config/database');
 const adminRoutes = require('./routes/admin');
+const authRoutes = require('./routes/auth');
+const reportRoutes = require('./routes/reports');
+const { mockAuth } = require('./middleware/auth'); // Switch to real auth later!
 
-
+// =============================================
+// 📧 EMAIL CONFIG CHECK
+// =============================================
 console.log("=== EMAIL CONFIG CHECK ===");
 console.log("EMAIL_USER:", process.env.EMAIL_USER);
 console.log("EMAIL_PASS:", process.env.EMAIL_PASS ? "[HIDDEN]" : "❌ Missing");
 console.log("===========================");
 
-
-// Initialize Express
+// =============================================
+// 🚀 Initialize Express
+// =============================================
 const app = express();
 
-// Connect to Database
+// =============================================
+// 🔗 Connect to Database
+// =============================================
 connectDB();
 
-require('./models/User');
-require('./models/Report');
+// =============================================
+// 🧩 Safely Load Mongoose Models (prevents overwrite errors)
+// =============================================
+const User = mongoose.models.User || require('./models/User');
+const Report = mongoose.models.Report || require('./models/Report');
 
-// Middleware
-app.use(cors({
-  origin: true, // Your React app URL
-  credentials: true
-}));
-app.use(express.json({ limit: '10mb' })); // For large image uploads later
+// =============================================
+// 🛡 Global Middleware
+// =============================================
+app.use(cors({ origin: true, credentials: true }));
+app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use(helmet());
+app.use(morgan('dev'));
 
-// Request logging middleware
+// =============================================
+// 🚫 API Rate Limiting (Anti-DDoS / Spam Control)
+// =============================================
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 200,
+  message: "Too many requests. Please slow down."
+});
+app.use('/api', apiLimiter);
+
+// =============================================
+// 📝 Simple Request Logger
+// =============================================
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();
 });
 
-// Health check with detailed info
+// =============================================
+// ❤️ Health Check Route
+// =============================================
 app.get('/api/health', (req, res) => {
   res.json({
     message: 'Community Connect API is running!',
@@ -50,47 +85,78 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// ⭐⭐⭐ ADD AUTH ROUTES ⭐⭐⭐
-app.use('/api/auth', require('./routes/auth'));
+// =============================================
+// 🔐 AUTH ROUTES
+// =============================================
+app.use('/api/auth', authRoutes);
 
-// ⭐⭐⭐ UPDATE REPORTS ROUTE TO INCLUDE AUTH ⭐⭐⭐
-// Import the auth middleware
-const { mockAuth } = require('./middleware/auth');
-app.use('/api/reports', mockAuth, require('./routes/reports'));
+// =============================================
+// 📝 REPORT ROUTES (currently using mockAuth)
+// Replace mockAuth with real JWT auth soon
+// =============================================
+app.use('/api/reports', mockAuth, reportRoutes);
 
-// ⭐⭐⭐ ADD ADMIN ROUTES ⭐⭐⭐
+// =============================================
+// ⭐ ADMIN ROUTES (Protected)
+// =============================================
 app.use('/api/admin', mockAuth, adminRoutes);
 
-// 404 handler for undefined routes
-app.use( (req, res) => {
+// =============================================
+// ❌ 404 Handler
+// =============================================
+app.use((req, res) => {
   res.status(404).json({
     success: false,
     message: `Route ${req.originalUrl} not found`
   });
 });
 
-// Global error handler
+// =============================================
+// ⚠ Validation Error Handler (Mongoose)
+// =============================================
 app.use((err, req, res, next) => {
-  console.error('🚨 Global Error Handler:', err.stack);
+  if (err.name === "ValidationError") {
+    const errors = Object.values(err.errors).map(e => e.message);
+    return res.status(400).json({
+      success: false,
+      message: "Validation error",
+      errors
+    });
+  }
+  next(err);
+});
+
+// =============================================
+// 🚨 Global Error Handler
+// =============================================
+app.use((err, req, res, next) => {
+  console.error("🚨 Global Error Handler:", err.stack);
   res.status(500).json({
     success: false,
-    message: 'Something went wrong!',
-    error: process.env.NODE_ENV === 'development' ? err.message : {}
+    message: "Something went wrong!",
+    error: process.env.NODE_ENV === "development" ? err.message : {}
   });
 });
 
+// =============================================
+// 🔌 Graceful Shutdown
+// =============================================
+process.on("SIGINT", () => {
+  mongoose.connection.close(() => {
+    console.log("📴 MongoDB Disconnected on app termination");
+    process.exit(0);
+  });
+});
 
-
-
- 
-
-  const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => {
-    console.log(`
+// =============================================
+// 🚀 Start Server
+// =============================================
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`
 🚀 Community Connect Backend Server Started!
 📍 Port: ${PORT}
 🌍 Environment: ${process.env.NODE_ENV || 'development'}
 📅 Started at: ${new Date().toISOString()}
-    `);
-  });
-
+  `);
+});

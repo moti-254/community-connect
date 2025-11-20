@@ -823,7 +823,8 @@ router.delete('/:reportId/images', async (req, res) => {
 });
 
 
-// PUT /api/reports/:id - Update report with email notifications
+
+ // PUT /api/reports/:id - Update report with email notifications
 router.put('/:id', async (req, res) => {
   try {
     console.log('\n🎯 ========== FRONTEND REPORT UPDATE STARTED ==========');
@@ -932,6 +933,7 @@ router.put('/:id', async (req, res) => {
     });
   }
 });
+
 
 // DELETE /api/reports/:id - Delete report
 router.delete('/:id', async (req, res) => {
