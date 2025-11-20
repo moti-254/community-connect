@@ -116,3 +116,6 @@ In the project directory, you can run:
 *   `eslint`: For code linting.
 *   `vite`: For the development server and build process.
 *   And other ESLint plugins.
+
+## Deployment url
+https://community-connect-brown.vercel.app
