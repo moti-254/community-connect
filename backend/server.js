@@ -49,7 +49,7 @@ const Report = mongoose.models.Report || require('./models/Report');
 // =============================================
 // 🛡 Global Middleware
 // =============================================
-app.use(cors({ origin: true, credentials: true }));
+app.use(cors({ origin: '*', credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(helmet());
